@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI SEO Content Writer SaaS</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header>
+      <h1>AI SEO Content Writer SaaS</h1>
+      <button id="logoutBtn" class="hidden">Logout</button>
+    </header>
+
+    <main>
+      <section id="authSection" class="card">
+        <h2>Login / Register</h2>
+        <div class="auth-grid">
+          <form id="registerForm">
+            <h3>Create account</h3>
+            <input name="name" type="text" placeholder="Name" required />
+            <input name="email" type="email" placeholder="Email" required />
+            <input name="password" type="password" placeholder="Password (8+ chars)" required />
+            <select name="plan">
+              <option value="starter">Starter (20/mo)</option>
+              <option value="pro">Pro (100/mo)</option>
+              <option value="agency">Agency (500/mo)</option>
+            </select>
+            <button type="submit">Register</button>
+          </form>
+
+          <form id="loginForm">
+            <h3>Sign in</h3>
+            <input name="email" type="email" placeholder="Email" required />
+            <input name="password" type="password" placeholder="Password" required />
+            <button type="submit">Login</button>
+          </form>
+        </div>
+      </section>
+
+      <section id="dashboardSection" class="hidden">
+        <div class="card">
+          <h2>Dashboard</h2>
+          <p id="userMeta"></p>
+          <div class="stats-grid">
+            <div class="stat"><span>Used</span><strong id="statUsed">0</strong></div>
+            <div class="stat"><span>Remaining</span><strong id="statRemaining">0</strong></div>
+            <div class="stat"><span>Last Keyword</span><strong id="statLatest">-</strong></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Generate SEO Content</h2>
+          <form id="generateForm">
+            <input name="keyword" type="text" placeholder="Primary keyword" required />
+            <input name="audience" type="text" placeholder="Target audience" />
+            <div class="input-row">
+              <select name="tone">
+                <option value="Professional">Professional</option>
+                <option value="Conversational">Conversational</option>
+                <option value="Authoritative">Authoritative</option>
+                <option value="Friendly">Friendly</option>
+              </select>
+              <select name="intent">
+                <option value="Informational">Informational</option>
+                <option value="Commercial">Commercial</option>
+                <option value="Transactional">Transactional</option>
+                <option value="Navigational">Navigational</option>
+              </select>
+            </div>
+            <div class="input-row">
+              <input name="language" type="text" placeholder="Language" value="English" />
+              <input name="length" type="text" placeholder="Length" value="1200-1500 words" />
+            </div>
+            <label class="checkbox"><input name="includeFaq" type="checkbox" checked /> Include FAQ section</label>
+            <button type="submit">Generate</button>
+          </form>
+          <div class="actions"><button id="copyBtn" type="button">Copy output</button></div>
+          <pre id="generatedOutput"></pre>
+        </div>
+
+        <div class="card">
+          <h2>Recent Content</h2>
+          <ul id="historyList"></ul>
+        </div>
+      </section>
+
+      <p id="message"></p>
+    </main>
+
+    <script src="/app.js"></script>
+  </body>
+</html>

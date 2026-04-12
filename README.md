@@ -1,0 +1,53 @@
+# AI SEO Content Writer SaaS
+
+Production-ready SaaS starter with auth, dashboard analytics, SEO generation workflows, and REST APIs.
+
+## Features
+
+- Email/password auth with JWT sessions
+- Multi-plan quotas (`starter`, `pro`, `agency`)
+- Dashboard stats (used, remaining, latest keyword)
+- SEO content generation endpoint with:
+  - Keyword, audience, tone, intent, language, length, FAQ toggle
+- Generation history with one-click load in UI
+- OpenAI integration (optional) with reliable fallback template mode
+- SQLite persistence
+
+## Stack
+
+- Backend: Node.js, Express, better-sqlite3
+- Frontend: Vanilla HTML/CSS/JS SPA
+- Auth: bcrypt + JWT
+
+## Setup
+
+```bash
+npm install
+cp .env.example .env
+npm run dev
+```
+
+Open: `http://localhost:3000`
+
+## API
+
+### Auth
+- `POST /api/auth/register`
+- `POST /api/auth/login`
+- `GET /api/auth/me`
+
+### Dashboard
+- `GET /api/dashboard/stats`
+
+### Content
+- `POST /api/content/generate`
+- `GET /api/content/history`
+
+### Public
+- `GET /api/plans`
+- `GET /api/health`
+
+## OpenAI Behavior
+
+- If `OPENAI_API_KEY` is set, the app attempts real AI generation through the Responses API.
+- If unavailable or request fails, the app automatically falls back to deterministic template output.

@@ -1,7 +1,8 @@
 const state = {
   token: localStorage.getItem("token") || "",
   user: null,
-  latestOutput: ""
+  latestOutput: "",
+  apiBase: localStorage.getItem("apiBase") || window.location.origin
 };
 
 const authSection = document.getElementById("authSection");
@@ -15,6 +16,8 @@ const statUsed = document.getElementById("statUsed");
 const statRemaining = document.getElementById("statRemaining");
 const statLatest = document.getElementById("statLatest");
 const sourceBadge = document.getElementById("sourceBadge");
+const apiBaseInput = document.getElementById("apiBaseInput");
+const saveApiBaseBtn = document.getElementById("saveApiBaseBtn");
 
 function showMessage(text, isError = false) {
   messageEl.textContent = text;
@@ -25,7 +28,18 @@ async function api(path, options = {}) {
   const headers = { "Content-Type": "application/json", ...(options.headers || {}) };
   if (state.token) headers.Authorization = `Bearer ${state.token}`;
 
-  const response = await fetch(path, { ...options, headers });
+  const url = new URL(path, state.apiBase).toString();
+  const response = await fetch(url, { ...options, headers });
+  const contentType = response.headers.get("content-type") || "";
+
+  if (!contentType.includes("application/json")) {
+    const text = await response.text();
+    const snippet = text.slice(0, 80).replace(/\s+/g, " ").trim();
+    throw new Error(
+      `API returned non-JSON response. Check your API URL/deployment. Received: ${snippet || "empty response"}`
+    );
+  }
+
   const data = await response.json();
   if (!response.ok) throw new Error(data.error || "Request failed");
   return data;
@@ -166,6 +180,13 @@ document.getElementById("copyBtn").addEventListener("click", async () => {
   }
 });
 
+saveApiBaseBtn.addEventListener("click", () => {
+  const customBase = apiBaseInput.value.trim();
+  state.apiBase = customBase || window.location.origin;
+  localStorage.setItem("apiBase", state.apiBase);
+  showMessage(`API URL set to ${state.apiBase}`);
+});
+
 logoutBtn.addEventListener("click", () => {
   state.token = "";
   state.user = null;
@@ -175,6 +196,8 @@ logoutBtn.addEventListener("click", () => {
   setAuthedUI(false);
   showMessage("Logged out.");
 });
+
+apiBaseInput.value = state.apiBase === window.location.origin ? "" : state.apiBase;
 
 (async function bootstrap() {
   if (!state.token) return setAuthedUI(false);

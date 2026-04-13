@@ -71,3 +71,8 @@ npm test
 ```
 
 Runs an end-to-end smoke test that starts the server, registers a user, generates content, and verifies the API response contract.
+
+
+### API Configuration (frontend)
+
+If frontend and backend are deployed on different domains, set the API URL in the app's **API Configuration** section. This prevents JSON parse errors when a static host returns HTML for `/api/*` routes.

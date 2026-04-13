@@ -1,0 +1,143 @@
+:root {
+  color-scheme: dark;
+  font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: #0d1117;
+  color: #e6edf3;
+}
+
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid #30363d;
+}
+
+main {
+  max-width: 1024px;
+  margin: 1.5rem auto;
+  padding: 0 1rem;
+}
+
+.card {
+  border: 1px solid #30363d;
+  background: #161b22;
+  border-radius: 12px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.auth-grid,
+.input-row,
+.stats-grid {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.auth-grid {
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+.stats-grid {
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+}
+
+.input-row {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.stat {
+  padding: 0.75rem;
+  border: 1px solid #30363d;
+  border-radius: 8px;
+  background: #0d1117;
+}
+
+.stat span {
+  display: block;
+  opacity: 0.7;
+  font-size: 0.85rem;
+}
+
+.stat strong {
+  display: block;
+  margin-top: 0.3rem;
+}
+
+form {
+  display: grid;
+  gap: 0.65rem;
+}
+
+input,
+select,
+button {
+  border: 1px solid #30363d;
+  border-radius: 8px;
+  padding: 0.65rem 0.75rem;
+  background: #0d1117;
+  color: #e6edf3;
+}
+
+button {
+  cursor: pointer;
+  background: #1f6feb;
+  border-color: #1f6feb;
+  font-weight: 600;
+}
+
+.actions {
+  margin: 0.5rem 0;
+}
+
+.checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+pre {
+  white-space: pre-wrap;
+  border: 1px solid #30363d;
+  background: #0d1117;
+  border-radius: 8px;
+  padding: 0.75rem;
+  min-height: 260px;
+}
+
+ul {
+  padding-left: 1rem;
+}
+
+.history-item {
+  cursor: pointer;
+  margin-bottom: 0.75rem;
+}
+
+.history-item:hover {
+  color: #9ecbff;
+}
+
+.hidden {
+  display: none;
+}
+
+#message {
+  min-height: 1.2rem;
+  font-weight: 600;
+}
+
+
+#sourceBadge {
+  margin-left: 0.75rem;
+  font-size: 0.9rem;
+  opacity: 0.8;
+}

@@ -11,6 +11,7 @@ const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || "";
 const OPENAI_MODEL = process.env.OPENAI_MODEL || "gpt-4o-mini";
+const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || "").toLowerCase().trim();
 
 if (!JWT_SECRET || JWT_SECRET.length < 32 || JWT_SECRET === "dev-secret-change-me") {
   throw new Error(
@@ -28,6 +29,7 @@ db.exec(`
     password_hash TEXT NOT NULL,
     plan TEXT NOT NULL DEFAULT 'starter',
     monthly_quota INTEGER NOT NULL DEFAULT 20,
+    role TEXT NOT NULL DEFAULT 'user',
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
   );
 
@@ -51,6 +53,9 @@ if (!cols.includes("intent")) db.exec("ALTER TABLE content_requests ADD COLUMN i
 if (!cols.includes("language")) db.exec("ALTER TABLE content_requests ADD COLUMN language TEXT");
 if (!cols.includes("length")) db.exec("ALTER TABLE content_requests ADD COLUMN length TEXT");
 
+const userCols = db.prepare("PRAGMA table_info(users)").all().map((c) => c.name);
+if (!userCols.includes("role")) db.exec("ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'user'");
+
 app.use((req, res, next) => {
   res.setHeader("X-Content-Type-Options", "nosniff");
   res.setHeader("X-Frame-Options", "DENY");
@@ -68,7 +73,7 @@ const planQuotas = {
 };
 
 function createToken(user) {
-  return jwt.sign({ sub: user.id, email: user.email, plan: user.plan }, JWT_SECRET, { expiresIn: "7d" });
+  return jwt.sign({ sub: user.id, email: user.email, plan: user.plan, role: user.role }, JWT_SECRET, { expiresIn: "7d" });
 }
 
 function authRequired(req, res, next) {
@@ -83,6 +88,15 @@ function authRequired(req, res, next) {
   } catch {
     return res.status(401).json({ error: "Invalid or expired token." });
   }
+}
+
+
+
+function adminRequired(req, res, next) {
+  const user = db.prepare("SELECT role FROM users WHERE id = ?").get(req.user.sub);
+  if (!user) return res.status(404).json({ error: "User not found." });
+  if (user.role !== "admin") return res.status(403).json({ error: "Admin access required." });
+  return next();
 }
 
 function getMonthUsage(userId) {
@@ -216,11 +230,18 @@ app.post("/api/auth/register", async (req, res) => {
   const selectedPlan = planQuotas[plan] ? plan : "starter";
   const passwordHash = await bcrypt.hash(password, 10);
   const result = db
-    .prepare("INSERT INTO users (name, email, password_hash, plan, monthly_quota) VALUES (?, ?, ?, ?, ?)")
-    .run(name.trim(), normalizedEmail, passwordHash, selectedPlan, planQuotas[selectedPlan]);
+    .prepare("INSERT INTO users (name, email, password_hash, plan, monthly_quota, role) VALUES (?, ?, ?, ?, ?, ?)")
+    .run(
+      name.trim(),
+      normalizedEmail,
+      passwordHash,
+      selectedPlan,
+      planQuotas[selectedPlan],
+      ADMIN_EMAIL && normalizedEmail === ADMIN_EMAIL ? "admin" : "user"
+    );
 
   const user = db
-    .prepare("SELECT id, name, email, plan, monthly_quota, created_at FROM users WHERE id = ?")
+    .prepare("SELECT id, name, email, plan, monthly_quota, role, created_at FROM users WHERE id = ?")
     .get(result.lastInsertRowid);
 
   return res.status(201).json({ token: createToken(user), user });
@@ -243,6 +264,7 @@ app.post("/api/auth/login", async (req, res) => {
     email: userRow.email,
     plan: userRow.plan,
     monthly_quota: userRow.monthly_quota,
+    role: userRow.role,
     created_at: userRow.created_at
   };
 
@@ -251,7 +273,7 @@ app.post("/api/auth/login", async (req, res) => {
 
 app.get("/api/auth/me", authRequired, (req, res) => {
   const user = db
-    .prepare("SELECT id, name, email, plan, monthly_quota, created_at FROM users WHERE id = ?")
+    .prepare("SELECT id, name, email, plan, monthly_quota, role, created_at FROM users WHERE id = ?")
     .get(req.user.sub);
 
   if (!user) return res.status(404).json({ error: "User not found." });
@@ -339,12 +361,36 @@ app.post("/api/content/generate", authRequired, async (req, res) => {
   return res.status(201).json({ item, generation_source: generation.source });
 });
 
+
+app.get("/api/admin/dashboard", authRequired, adminRequired, (req, res) => {
+  const totalUsers = db.prepare("SELECT COUNT(*) AS total FROM users").get().total;
+  const totalContent = db.prepare("SELECT COUNT(*) AS total FROM content_requests").get().total;
+  const totalAdmins = db.prepare("SELECT COUNT(*) AS total FROM users WHERE role = 'admin'").get().total;
+  const recentUsers = db
+    .prepare(
+      `SELECT id, name, email, role, created_at
+       FROM users
+       ORDER BY datetime(created_at) DESC
+       LIMIT 10`
+    )
+    .all();
+
+  return res.json({
+    stats: { total_users: totalUsers, total_content: totalContent, total_admins: totalAdmins },
+    recent_users: recentUsers
+  });
+});
+
 app.get("/api/plans", (req, res) => {
   res.json({ plans: planQuotas });
 });
 
 app.get("/api/health", (req, res) => {
   res.json({ status: "ok", service: "ai-seo-content-writer-saas", ai_enabled: Boolean(OPENAI_API_KEY) });
+});
+
+app.get("/admin", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "admin.html"));
 });
 
 app.get("*", (req, res) => {

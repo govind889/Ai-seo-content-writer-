@@ -74,6 +74,11 @@ async function run() {
     assert.ok(['openai', 'fallback'].includes(generateData.generation_source));
     assert.ok(generateData.item.generated_content.length > 50);
 
+    const adminDeniedRes = await fetch(`${BASE}/api/admin/dashboard`, {
+      headers: { Authorization: `Bearer ${registerData.token}` }
+    });
+    assert.equal(adminDeniedRes.status, 403);
+
     console.log('Smoke test passed');
   } finally {
     server.kill('SIGTERM');

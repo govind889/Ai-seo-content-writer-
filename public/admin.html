@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin Dashboard</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header>
+      <h1>Admin Dashboard</h1>
+      <a href="/">Back to App</a>
+    </header>
+    <main>
+      <section class="card">
+        <h2>Protected Admin Metrics</h2>
+        <p class="muted">Requires an authenticated admin JWT stored as <code>token</code> in localStorage.</p>
+        <button id="loadBtn" type="button">Load Admin Data</button>
+        <pre id="output"></pre>
+      </section>
+    </main>
+    <script src="/admin.js"></script>
+  </body>
+</html>

@@ -47,6 +47,9 @@ Open: `http://localhost:3000`
 - `GET /api/plans`
 - `GET /api/health`
 
+### Admin (authenticated + admin role)
+- `GET /api/admin/dashboard`
+
 ## OpenAI Behavior
 
 - If `OPENAI_API_KEY` is set, the app attempts real AI generation through the Responses API.
@@ -76,3 +79,9 @@ Runs an end-to-end smoke test that starts the server, registers a user, generate
 ### API Configuration (frontend)
 
 If frontend and backend are deployed on different domains, set the API URL in the app's **API Configuration** section. This prevents JSON parse errors when a static host returns HTML for `/api/*` routes.
+
+
+### Admin Access
+
+Set `ADMIN_EMAIL` in `.env` to auto-assign admin role at registration for that email.
+Then open `/admin` and load protected admin metrics using the logged-in token.

@@ -389,7 +389,7 @@ app.get("/api/health", (req, res) => {
   res.json({ status: "ok", service: "ai-seo-content-writer-saas", ai_enabled: Boolean(OPENAI_API_KEY) });
 });
 
-app.get("/admin", (req, res) => {
+app.get(["/admin", "/admin/"], (req, res) => {
   res.sendFile(path.join(__dirname, "public", "admin.html"));
 });
 

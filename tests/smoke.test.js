@@ -79,6 +79,11 @@ async function run() {
     });
     assert.equal(adminDeniedRes.status, 403);
 
+    const adminPageRes = await fetch(`${BASE}/admin`);
+    assert.equal(adminPageRes.status, 200);
+    const adminPageHtml = await adminPageRes.text();
+    assert.ok(adminPageHtml.includes('Admin Dashboard'));
+
     console.log('Smoke test passed');
   } finally {
     server.kill('SIGTERM');

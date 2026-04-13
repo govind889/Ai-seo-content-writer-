@@ -84,4 +84,4 @@ If frontend and backend are deployed on different domains, set the API URL in th
 ### Admin Access
 
 Set `ADMIN_EMAIL` in `.env` to auto-assign admin role at registration for that email.
-Then open `/admin` and load protected admin metrics using the logged-in token.
+Then open `/admin` (or `/admin/`) and load protected admin metrics using the logged-in token.

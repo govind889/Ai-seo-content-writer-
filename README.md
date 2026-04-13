@@ -62,3 +62,12 @@ Returns generated item plus `generation_source` (`openai` or `fallback`) so the 
 
 - `JWT_SECRET` is required and must be at least 32 characters. The server refuses to start otherwise.
 - The frontend avoids `innerHTML` when rendering history to prevent XSS from untrusted content.
+
+
+## Testing
+
+```bash
+npm test
+```
+
+Runs an end-to-end smoke test that starts the server, registers a user, generates content, and verifies the API response contract.

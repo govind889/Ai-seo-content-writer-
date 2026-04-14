@@ -1,4 +1,4 @@
-
+const BASE_URL = "https://ai-seo-content-writer.onrender.com";
 const state = {
   token: localStorage.getItem("token") || "",
   user: null,
@@ -20,15 +20,23 @@ function showMessage(text, isError = false) {
   messageEl.textContent = text;
   messageEl.style.color = isError ? "#ff8c8c" : "#9effa0";
 }
-const BASE_URL = "https://ai-seo-content-writer.onrender.com";
+
 async function api(path, options = {}) {
   const headers = { "Content-Type": "application/json", ...(options.headers || {}) };
   if (state.token) headers.Authorization = `Bearer ${state.token}`;
 
-  const response = await fetch(path, { ...options, headers });
-  const data = await response.json();
-  if (!response.ok) throw new Error(data.error || "Request failed");
-  return data;
+  const response = await fetch(API_BASE + path, { ...options, headers });
+
+  const text = await response.text();
+
+  try {
+    const data = JSON.parse(text);
+    if (!response.ok) throw new Error(data.error || "Request failed");
+    return data;
+  } catch {
+    throw new Error("Server returned invalid JSON: " + text.substring(0, 100));
+  }
+}
 }
 
 function setAuthedUI(isAuthed) {

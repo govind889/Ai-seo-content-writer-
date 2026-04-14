@@ -1,4 +1,4 @@
-const BASE_URL = "https://ai-seo-content-writer.onrender.com";
+
 const state = {
   token: localStorage.getItem("token") || "",
   user: null,
@@ -20,7 +20,7 @@ function showMessage(text, isError = false) {
   messageEl.textContent = text;
   messageEl.style.color = isError ? "#ff8c8c" : "#9effa0";
 }
-
+const BASE_URL = "https://ai-seo-content-writer.onrender.com";
 async function api(path, options = {}) {
   const headers = { "Content-Type": "application/json", ...(options.headers || {}) };
   if (state.token) headers.Authorization = `Bearer ${state.token}`;

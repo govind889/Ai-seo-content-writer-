@@ -3,12 +3,12 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>AI SEO Content Writer SaaS</title>
+    <title>AI SEO + Video Agent SaaS</title>
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
     <header>
-      <h1>AI SEO Content Writer SaaS</h1>
+      <h1>AI SEO + Video Agent SaaS</h1>
       <button id="logoutBtn" class="hidden">Logout</button>
     </header>
 
@@ -45,7 +45,7 @@
           <div class="stats-grid">
             <div class="stat"><span>Used</span><strong id="statUsed">0</strong></div>
             <div class="stat"><span>Remaining</span><strong id="statRemaining">0</strong></div>
-            <div class="stat"><span>Last Keyword</span><strong id="statLatest">-</strong></div>
+            <div class="stat"><span>Last Generation</span><strong id="statLatest">-</strong></div>
           </div>
         </div>
 
@@ -79,9 +79,58 @@
           <pre id="generatedOutput"></pre>
         </div>
 
-        <div class="card">
-          <h2>Recent Content</h2>
-          <ul id="historyList"></ul>
+
+        <div class="card video-agent-card">
+          <div class="section-heading">
+            <div>
+              <h2>Video AI Agent</h2>
+              <p>Turn a campaign idea into a platform-ready video brief, script, shot list, captions, and edit notes.</p>
+            </div>
+            <span class="badge">New</span>
+          </div>
+          <form id="videoForm">
+            <input name="topic" type="text" placeholder="Video topic or campaign idea" required />
+            <input name="audience" type="text" placeholder="Target viewer" />
+            <div class="input-row">
+              <select name="platform">
+                <option value="YouTube Shorts">YouTube Shorts</option>
+                <option value="TikTok">TikTok</option>
+                <option value="Instagram Reels">Instagram Reels</option>
+                <option value="LinkedIn Video">LinkedIn Video</option>
+                <option value="YouTube Long-form">YouTube Long-form</option>
+              </select>
+              <select name="goal">
+                <option value="Build awareness">Build awareness</option>
+                <option value="Drive leads">Drive leads</option>
+                <option value="Sell a product">Sell a product</option>
+                <option value="Educate customers">Educate customers</option>
+              </select>
+            </div>
+            <div class="input-row">
+              <input name="duration" type="text" placeholder="Duration" value="60 seconds" />
+              <select name="style">
+                <option value="Educational">Educational</option>
+                <option value="Story-driven">Story-driven</option>
+                <option value="Product demo">Product demo</option>
+                <option value="Founder-led">Founder-led</option>
+                <option value="Cinematic">Cinematic</option>
+              </select>
+            </div>
+            <label class="checkbox"><input name="includeShotList" type="checkbox" checked /> Include production shot list</label>
+            <button type="submit">Generate video plan</button>
+          </form>
+          <pre id="videoOutput"></pre>
+        </div>
+
+        <div class="history-grid">
+          <div class="card">
+            <h2>Recent SEO Content</h2>
+            <ul id="historyList"></ul>
+          </div>
+          <div class="card">
+            <h2>Recent Video Plans</h2>
+            <ul id="videoHistoryList"></ul>
+          </div>
         </div>
       </section>
 

@@ -38,6 +38,20 @@ db.exec(`
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id)
   );
+
+  CREATE TABLE IF NOT EXISTS video_requests (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    topic TEXT NOT NULL,
+    platform TEXT,
+    audience TEXT,
+    goal TEXT,
+    duration TEXT,
+    style TEXT,
+    generated_plan TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+  );
 `);
 
 const cols = db.prepare("PRAGMA table_info(content_requests)").all().map((c) => c.name);
@@ -73,7 +87,7 @@ function authRequired(req, res, next) {
 }
 
 function getMonthUsage(userId) {
-  return db
+  const contentTotal = db
     .prepare(
       `SELECT COUNT(*) AS total
        FROM content_requests
@@ -81,6 +95,17 @@ function getMonthUsage(userId) {
          AND strftime('%Y-%m', created_at) = strftime('%Y-%m', 'now')`
     )
     .get(userId).total;
+
+  const videoTotal = db
+    .prepare(
+      `SELECT COUNT(*) AS total
+       FROM video_requests
+       WHERE user_id = ?
+         AND strftime('%Y-%m', created_at) = strftime('%Y-%m', 'now')`
+    )
+    .get(userId).total;
+
+  return contentTotal + videoTotal;
 }
 
 function fallbackSeoContent({ keyword, audience, tone, intent, language, length, includeFaq }) {
@@ -172,6 +197,95 @@ async function generateSeoContent(payload) {
   return fallbackSeoContent(payload);
 }
 
+function fallbackVideoPlan({ topic, platform, audience, goal, duration, style, includeShotList }) {
+  return [
+    `# Video AI Agent Plan: ${topic}`,
+    "",
+    `**Platform:** ${platform}`,
+    `**Audience:** ${audience || "Target viewers"}`,
+    `**Goal:** ${goal}`,
+    `**Duration:** ${duration}`,
+    `**Style:** ${style}`,
+    "",
+    "## Creative Brief",
+    `Create a ${style.toLowerCase()} video about **${topic}** that moves ${audience || "viewers"} toward ${goal.toLowerCase()}. Open with a specific pain point, show a fast payoff, and end with one clear action.`,
+    "",
+    "## Hook Options",
+    `1. Stop scrolling if ${topic} feels harder than it should.`,
+    `2. Here is the simplest way to understand ${topic} in under ${duration}.`,
+    `3. Most people miss this one thing about ${topic}.`,
+    "",
+    "## Script",
+    "**0-3s:** Pattern interrupt with a bold promise and visual contrast.",
+    `**3-15s:** Explain why ${topic} matters to ${audience || "the viewer"} right now.`,
+    "**15-45s:** Deliver three practical points with captions and quick examples.",
+    `**Final beat:** Invite viewers to ${goal.toLowerCase()} with a direct CTA.`,
+    "",
+    includeShotList
+      ? "## Shot List\n- Close-up talking head for the hook.\n- Screen recording or product demo for proof.\n- B-roll that shows the end benefit.\n- Branded end card with CTA."
+      : "",
+    "",
+    "## Production Notes",
+    "- Use captions on every spoken line.",
+    "- Keep cuts tight; remove pauses longer than one beat.",
+    "- Add a visual reset every 4-6 seconds.",
+    "- Export in the platform-native aspect ratio."
+  ].filter(Boolean).join("\n");
+}
+
+async function openAiVideoPlan(input) {
+  const prompt = [
+    "You are a senior AI video strategist and production agent.",
+    "Generate a production-ready video plan in markdown.",
+    `Topic: ${input.topic}`,
+    `Platform: ${input.platform}`,
+    `Audience: ${input.audience || "General"}`,
+    `Goal: ${input.goal}`,
+    `Duration: ${input.duration}`,
+    `Style: ${input.style}`,
+    `Include shot list: ${input.includeShotList ? "yes" : "no"}`,
+    "Return: creative brief, hook options, full script with timestamps, visual direction, shot list if requested, caption ideas, editing notes, and CTA."
+  ].join("\n");
+
+  const response = await fetch("https://api.openai.com/v1/responses", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${OPENAI_API_KEY}`
+    },
+    body: JSON.stringify({
+      model: OPENAI_MODEL,
+      input: prompt
+    })
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`OpenAI request failed: ${response.status} ${text.slice(0, 200)}`);
+  }
+
+  const data = await response.json();
+  const text = data.output_text;
+
+  if (!text || !text.trim()) {
+    throw new Error("OpenAI returned an empty response.");
+  }
+
+  return text;
+}
+
+async function generateVideoPlan(payload) {
+  if (OPENAI_API_KEY) {
+    try {
+      return await openAiVideoPlan(payload);
+    } catch (error) {
+      console.error("Video AI generation failed; falling back to template:", error.message);
+    }
+  }
+
+  return fallbackVideoPlan(payload);
+}
+
 app.post("/api/auth/register", async (req, res) => {
   const { name, email, password, plan } = req.body;
 
@@ -239,19 +353,27 @@ app.get("/api/dashboard/stats", authRequired, (req, res) => {
   const monthUsage = getMonthUsage(user.id);
   const latest = db
     .prepare(
-      `SELECT keyword, created_at
-       FROM content_requests
-       WHERE user_id = ?
+      `SELECT label, created_at
+       FROM (
+         SELECT 'SEO: ' || keyword AS label, created_at
+         FROM content_requests
+         WHERE user_id = ?
+         UNION ALL
+         SELECT 'Video: ' || topic AS label, created_at
+         FROM video_requests
+         WHERE user_id = ?
+       )
        ORDER BY datetime(created_at) DESC
        LIMIT 1`
     )
-    .get(user.id);
+    .get(user.id, user.id);
 
   return res.json({
     monthly_used: monthUsage,
     monthly_quota: user.monthly_quota,
     remaining: Math.max(user.monthly_quota - monthUsage, 0),
-    latest_keyword: latest?.keyword || null,
+    latest_generation: latest?.label || null,
+    latest_keyword: latest?.label || null,
     latest_created_at: latest?.created_at || null
   });
 });
@@ -306,6 +428,63 @@ app.post("/api/content/generate", authRequired, async (req, res) => {
     .prepare(
       `SELECT id, keyword, audience, tone, intent, language, length, generated_content, created_at
        FROM content_requests
+       WHERE id = ?`
+    )
+    .get(insert.lastInsertRowid);
+
+  return res.status(201).json({ item });
+});
+
+app.get("/api/video/history", authRequired, (req, res) => {
+  const rows = db
+    .prepare(
+      `SELECT id, topic, platform, audience, goal, duration, style, generated_plan, created_at
+       FROM video_requests
+       WHERE user_id = ?
+       ORDER BY datetime(created_at) DESC
+       LIMIT 50`
+    )
+    .all(req.user.sub);
+
+  return res.json({ items: rows });
+});
+
+app.post("/api/video/generate", authRequired, async (req, res) => {
+  const topic = (req.body.topic || "").trim();
+  const platform = (req.body.platform || "YouTube Shorts").trim();
+  const audience = (req.body.audience || "").trim();
+  const goal = (req.body.goal || "Build awareness").trim();
+  const duration = (req.body.duration || "60 seconds").trim();
+  const style = (req.body.style || "Educational").trim();
+  const includeShotList = Boolean(req.body.includeShotList);
+
+  if (!topic) {
+    return res.status(400).json({ error: "Video topic is required." });
+  }
+
+  const user = db.prepare("SELECT id, monthly_quota FROM users WHERE id = ?").get(req.user.sub);
+  if (!user) return res.status(404).json({ error: "User not found." });
+
+  const usage = getMonthUsage(user.id);
+  if (usage >= user.monthly_quota) {
+    return res.status(403).json({
+      error: `Monthly quota reached (${user.monthly_quota}). Upgrade your plan to continue.`
+    });
+  }
+
+  const generated = await generateVideoPlan({ topic, platform, audience, goal, duration, style, includeShotList });
+
+  const insert = db
+    .prepare(
+      `INSERT INTO video_requests (user_id, topic, platform, audience, goal, duration, style, generated_plan)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+    )
+    .run(user.id, topic, platform || null, audience || null, goal || null, duration || null, style || null, generated);
+
+  const item = db
+    .prepare(
+      `SELECT id, topic, platform, audience, goal, duration, style, generated_plan, created_at
+       FROM video_requests
        WHERE id = ?`
     )
     .get(insert.lastInsertRowid);

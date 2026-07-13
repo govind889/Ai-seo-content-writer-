@@ -1,4 +1,4 @@
-const BASE_URL = "https://ai-seo-content-writer.onrender.com";
+const API_BASE = "";
 const state = {
   token: localStorage.getItem("token") || "",
   user: null,
@@ -11,6 +11,8 @@ const messageEl = document.getElementById("message");
 const userMetaEl = document.getElementById("userMeta");
 const generatedOutputEl = document.getElementById("generatedOutput");
 const historyListEl = document.getElementById("historyList");
+const videoOutputEl = document.getElementById("videoOutput");
+const videoHistoryListEl = document.getElementById("videoHistoryList");
 const logoutBtn = document.getElementById("logoutBtn");
 const statUsed = document.getElementById("statUsed");
 const statRemaining = document.getElementById("statRemaining");
@@ -26,17 +28,17 @@ async function api(path, options = {}) {
   if (state.token) headers.Authorization = `Bearer ${state.token}`;
 
   const response = await fetch(API_BASE + path, { ...options, headers });
-
   const text = await response.text();
+  let data;
 
   try {
-    const data = JSON.parse(text);
-    if (!response.ok) throw new Error(data.error || "Request failed");
-    return data;
+    data = text ? JSON.parse(text) : {};
   } catch {
     throw new Error("Server returned invalid JSON: " + text.substring(0, 100));
   }
-}
+
+  if (!response.ok) throw new Error(data.error || "Request failed");
+  return data;
 }
 
 function setAuthedUI(isAuthed) {
@@ -55,14 +57,20 @@ function renderHistory(items) {
 
   if (!items.length) {
     const li = document.createElement("li");
-    li.textContent = "No content generated yet.";
+    li.textContent = "No SEO content generated yet.";
     historyListEl.appendChild(li);
     return;
   }
 
   for (const item of items) {
     const li = document.createElement("li");
-    li.innerHTML = `<strong>${item.keyword}</strong> · ${item.created_at}<br/>${item.intent || "-"} | ${item.tone || "-"} | ${item.language || "-"}`;
+    const title = document.createElement("strong");
+    title.textContent = item.keyword;
+    const meta = document.createElement("span");
+    meta.textContent = ` · ${item.created_at}`;
+    const details = document.createElement("span");
+    details.textContent = `${item.intent || "-"} | ${item.tone || "-"} | ${item.language || "-"}`;
+    li.append(title, meta, document.createElement("br"), details);
     li.className = "history-item";
     li.addEventListener("click", () => {
       state.latestOutput = item.generated_content;
@@ -72,22 +80,52 @@ function renderHistory(items) {
   }
 }
 
+function renderVideoHistory(items) {
+  videoHistoryListEl.innerHTML = "";
+
+  if (!items.length) {
+    const li = document.createElement("li");
+    li.textContent = "No video plans generated yet.";
+    videoHistoryListEl.appendChild(li);
+    return;
+  }
+
+  for (const item of items) {
+    const li = document.createElement("li");
+    const title = document.createElement("strong");
+    title.textContent = item.topic;
+    const meta = document.createElement("span");
+    meta.textContent = ` · ${item.created_at}`;
+    const details = document.createElement("span");
+    details.textContent = `${item.platform || "-"} | ${item.duration || "-"} | ${item.style || "-"}`;
+    li.append(title, meta, document.createElement("br"), details);
+    li.className = "history-item";
+    li.addEventListener("click", () => {
+      state.latestOutput = item.generated_plan;
+      videoOutputEl.textContent = state.latestOutput;
+    });
+    videoHistoryListEl.appendChild(li);
+  }
+}
+
 function renderStats(stats) {
   statUsed.textContent = `${stats.monthly_used}/${stats.monthly_quota}`;
   statRemaining.textContent = String(stats.remaining);
-  statLatest.textContent = stats.latest_keyword || "-";
+  statLatest.textContent = stats.latest_generation || stats.latest_keyword || "-";
 }
 
 async function loadDashboard() {
-  const [{ user }, { items }, stats] = await Promise.all([
+  const [{ user }, { items }, { items: videoItems }, stats] = await Promise.all([
     api("/api/auth/me"),
     api("/api/content/history"),
+    api("/api/video/history"),
     api("/api/dashboard/stats")
   ]);
 
   state.user = user;
   renderUser();
   renderHistory(items);
+  renderVideoHistory(videoItems);
   renderStats(stats);
   setAuthedUI(true);
 }
@@ -131,7 +169,27 @@ document.getElementById("generateForm").addEventListener("submit", async (event)
 
     state.latestOutput = item.generated_content;
     generatedOutputEl.textContent = state.latestOutput;
-    showMessage("Content generated.");
+    showMessage("SEO content generated.");
+    await loadDashboard();
+  } catch (error) {
+    showMessage(error.message, true);
+  }
+});
+
+document.getElementById("videoForm").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const payload = Object.fromEntries(new FormData(event.target).entries());
+  payload.includeShotList = Boolean(payload.includeShotList);
+
+  try {
+    const { item } = await api("/api/video/generate", {
+      method: "POST",
+      body: JSON.stringify(payload)
+    });
+
+    state.latestOutput = item.generated_plan;
+    videoOutputEl.textContent = state.latestOutput;
+    showMessage("Video AI agent plan generated.");
     await loadDashboard();
   } catch (error) {
     showMessage(error.message, true);
@@ -158,6 +216,7 @@ logoutBtn.addEventListener("click", () => {
   state.latestOutput = "";
   localStorage.removeItem("token");
   generatedOutputEl.textContent = "";
+  videoOutputEl.textContent = "";
   setAuthedUI(false);
   showMessage("Logged out.");
 });
